@@ -1,0 +1,50 @@
+{
+  "name": "reaction-viewer",
+  "displayName": "Reaction Viewer",
+  "description": "Compare and align XYZ trajectories side by side with 3Dmol.js.",
+  "version": "0.3.2",
+  "publisher": "ZechangSun",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Visualization"],
+  "activationEvents": [
+    "onCommand:reactionViewer.open"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "reactionViewer.open",
+        "title": "Open Molecular Comparison",
+        "category": "Reaction Viewer"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "reactionViewer.open",
+          "when": "resourceExtname == .xyz || resourceExtname == .trj",
+          "group": "navigation@20"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vendor": "node ./scripts/vendor.mjs",
+    "generate:test-data": "node ./scripts/generate-test-data.mjs",
+    "compile": "npm run vendor && tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "node --test test/*.test.js",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "3dmol": "^2.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.8.0"
+  }
+}

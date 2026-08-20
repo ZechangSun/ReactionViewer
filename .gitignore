@@ -1,0 +1,4 @@
+node_modules/
+out/
+media/3Dmol-min.js
+*.vsix

@@ -1,0 +1,10 @@
+3
+frame 1
+O 0 0 0
+H 0.95 0 0
+H -0.24 0.93 0
+3
+frame 2 swaps atom order
+H 0.95 0 0
+O 0 0 0
+H -0.24 0.93 0
