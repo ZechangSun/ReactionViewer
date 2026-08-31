@@ -2,7 +2,7 @@
   "name": "reaction-viewer",
   "displayName": "Reaction Viewer",
   "description": "Compare and align XYZ trajectories side by side with 3Dmol.js.",
-  "version": "0.3.2",
+  "version": "0.4.1",
   "publisher": "ZechangSun",
   "icon": "media/icon.png",
   "engines": {
