@@ -105,8 +105,8 @@ function openViewer(context: vscode.ExtensionContext, files: MoleculeFile[]): vo
       <button id="alignButton" title="Rigid least-squares alignment to the first molecule">Kabsch align</button>
       <button id="resetButton">Reset view</button>
       <span class="divider"></span>
-      <label class="check-label" title="Show detected metal–donor contacts as thin dashed bonds"><input id="coordinationToggle" type="checkbox" checked> Coordination</label>
-      <label title="Distance threshold used for automatic coordination-bond detection">Cutoff <select id="coordinationCutoff"><option value="1.20">Strict</option><option value="1.32" selected>Normal</option><option value="1.48">Wide</option></select></label>
+      <label class="check-label" title="Show inferred metal–ligand contacts as thin dashed lines"><input id="coordinationToggle" type="checkbox" checked> Metal contacts</label>
+      <label title="Distance threshold used to infer metal–ligand contacts">Range <select id="coordinationCutoff"><option value="1.20">Strict</option><option value="1.32" selected>Normal</option><option value="1.48">Wide</option></select></label>
       <label class="check-label" title="Highlight bonds and atoms that change from reactant to product"><input id="reactionCenterToggle" type="checkbox" checked disabled> Reaction center</label>
       <span class="divider"></span>
       <button id="playButton">▶ Play</button>

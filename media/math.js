@@ -166,7 +166,48 @@
   ]);
   const donorElements = new Set(['B', 'C', 'N', 'O', 'F', 'Si', 'P', 'S', 'Cl', 'As', 'Se', 'Br', 'I']);
 
-  function findCoordinationBonds(atoms, cutoffScale = 1.32) {
+  function bondKey({ i, j }) {
+    return `${Math.min(i, j)}-${Math.max(i, j)}`;
+  }
+
+  function planBondPresentation(metalContacts = [], reactionBonds = [], showMetalContacts = true) {
+    const hiddenBaseBonds = new Map(
+      [...metalContacts, ...reactionBonds].map((bond) => [bondKey(bond), bond]),
+    );
+    return {
+      hiddenBaseBonds: [...hiddenBaseBonds.values()],
+      metalContactOverlays: showMetalContacts ? metalContacts : [],
+      reactionOverlays: reactionBonds,
+    };
+  }
+
+  function reactionBondOverlays(center, role) {
+    if (!center || role !== 'transitionState') return [];
+    return [...center.broken, ...center.formed];
+  }
+
+  function reactionFocusLayers(atoms, atomIndices, localRadius = 2.5) {
+    const coreSet = new Set((atomIndices || []).filter((index) => Number.isInteger(index) && atoms[index]));
+    const shell = [];
+    const context = [];
+    const radiusSquared = localRadius * localRadius;
+    atoms.forEach((atom, index) => {
+      if (coreSet.has(index)) return;
+      const isLocal = [...coreSet].some((coreIndex) => {
+        const core = atoms[coreIndex];
+        return (atom.x - core.x) ** 2 + (atom.y - core.y) ** 2 + (atom.z - core.z) ** 2 <= radiusSquared;
+      });
+      (isLocal ? shell : context).push(index);
+    });
+    return { core: [...coreSet].sort((a, b) => a - b), shell, context };
+  }
+
+  function reactionHaloRadius(element) {
+    const radius = covalentRadii[element] || 0.77;
+    return Math.min(1.05, 0.58 + 0.18 * radius);
+  }
+
+  function findMetalLigandContacts(atoms, cutoffScale = 1.32) {
     const bonds = [];
     for (let i = 0; i < atoms.length; i++) {
       for (let j = i + 1; j < atoms.length; j++) {
@@ -183,24 +224,46 @@
         const metalRadius = covalentRadii[atoms[metalIndex].elem] || 1.45;
         const donorRadius = covalentRadii[atoms[donorIndex].elem] || 0.8;
         const cutoff = Math.min(3.4, cutoffScale * (metalRadius + donorRadius));
-        if (distance >= 0.5 && distance <= cutoff) bonds.push({ i, j, metalIndex, donorIndex, distance });
+        if (distance >= 0.5 && distance <= cutoff) {
+          bonds.push({ i, j, metalIndex, donorIndex, distance, kind: 'metalContact' });
+        }
       }
     }
     return bonds;
+  }
+
+  function trackMetalLigandContacts(frames, cutoffScale = 1.32, hysteresis = 0.08) {
+    if (!Array.isArray(frames) || !frames.length) return [];
+    if (!Number.isFinite(hysteresis) || hysteresis < 0) throw new Error('Metal-contact hysteresis must be non-negative.');
+    let active = new Set();
+    return frames.map((frame) => {
+      const entering = findMetalLigandContacts(frame.atoms, cutoffScale);
+      const enteringKeys = new Set(entering.map(bondKey));
+      const candidates = hysteresis > 0
+        ? findMetalLigandContacts(frame.atoms, cutoffScale + hysteresis)
+        : entering;
+      const retained = candidates.filter((bond) => enteringKeys.has(bondKey(bond)) || active.has(bondKey(bond)));
+      active = new Set(retained.map(bondKey));
+      return retained;
+    });
   }
 
   function findCovalentBonds(atoms, cutoffScale = 1.22) {
     const bonds = [];
     for (let i = 0; i < atoms.length; i++) {
       for (let j = i + 1; j < atoms.length; j++) {
-        if (metals.has(atoms[i].elem) !== metals.has(atoms[j].elem)) continue;
+        // Metal-containing pairs are reported separately as inferred contacts. Treating
+        // metal-metal pairs as ordinary covalent bonds was especially misleading.
+        if (metals.has(atoms[i].elem) || metals.has(atoms[j].elem)) continue;
         const dx = atoms[i].x - atoms[j].x;
         const dy = atoms[i].y - atoms[j].y;
         const dz = atoms[i].z - atoms[j].z;
         const distance = Math.hypot(dx, dy, dz);
         const radiusI = covalentRadii[atoms[i].elem] || 0.77;
         const radiusJ = covalentRadii[atoms[j].elem] || 0.77;
-        if (distance >= 0.45 && distance <= cutoffScale * (radiusI + radiusJ)) bonds.push({ i, j, distance });
+        if (distance >= 0.45 && distance <= cutoffScale * (radiusI + radiusJ)) {
+          bonds.push({ i, j, distance, kind: 'covalent' });
+        }
       }
     }
     return bonds;
@@ -210,9 +273,12 @@
     if (reactantAtoms.length !== productAtoms.length) throw new Error('Reaction-center detection needs matching atom counts.');
     const mismatch = reactantAtoms.findIndex((atom, index) => atom.elem !== productAtoms[index].elem);
     if (mismatch >= 0) throw new Error(`Reaction atom ${mismatch + 1} differs (${reactantAtoms[mismatch].elem} vs ${productAtoms[mismatch].elem}).`);
-    const key = ({ i, j }) => `${Math.min(i, j)}-${Math.max(i, j)}`;
-    const reactant = new Map(findCovalentBonds(reactantAtoms).map((bond) => [key(bond), bond]));
-    const product = new Map(findCovalentBonds(productAtoms).map((bond) => [key(bond), bond]));
+    const inferredConnectivity = (atoms) => [
+      ...findCovalentBonds(atoms),
+      ...findMetalLigandContacts(atoms),
+    ];
+    const reactant = new Map(inferredConnectivity(reactantAtoms).map((bond) => [bondKey(bond), bond]));
+    const product = new Map(inferredConnectivity(productAtoms).map((bond) => [bondKey(bond), bond]));
     const broken = [...reactant].filter(([bondKey]) => !product.has(bondKey)).map(([, bond]) => bond);
     const formed = [...product].filter(([bondKey]) => !reactant.has(bondKey)).map(([, bond]) => bond);
     const atomIndices = [...new Set([...broken, ...formed].flatMap(({ i, j }) => [i, j]))].sort((a, b) => a - b);
@@ -276,7 +342,8 @@
 
   return {
     parseXYZ, centeredFrames, kabschTransform, applyTransform, toXYZ, rmsd,
-    findCoordinationBonds, findCovalentBonds, findReactionCenter,
+    findMetalLigandContacts, trackMetalLigandContacts, findCovalentBonds, findReactionCenter,
+    planBondPresentation, reactionBondOverlays, reactionFocusLayers, reactionHaloRadius,
     parseEnergy, inferReactionRoles, reactionEnergetics,
   };
 });

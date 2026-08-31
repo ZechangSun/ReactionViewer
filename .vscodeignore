@@ -1,7 +1,10 @@
 .vscode/**
 src/**
 test/**
+test-data/**
 scripts/**
 node_modules/**
 tsconfig.json
+package-lock.json
+*.pdf
 **/*.map

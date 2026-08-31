@@ -55,9 +55,8 @@ label { color: var(--muted); }
 .barrier-metrics b { color: #f0c66b; font-weight: 600; }
 .reaction-legend { display: flex; gap: 9px; margin-left: 8px; color: var(--muted); font-size: 10px; white-space: nowrap; }
 .legend-dot { display: inline-block; width: 8px; height: 8px; margin-right: 3px; border-radius: 50%; }
-.legend-dot.broken { background: #ff5d67; }
-.legend-dot.formed { background: #44d17a; }
-.legend-dot.center { border: 2px solid #dce5ef; background: transparent; opacity: .9; }
+.legend-dot.center { border: 2px solid #ffd166; background: transparent; opacity: .95; }
+.legend-dot.context { background: #dce5ef; opacity: .10; }
 
 #viewers { flex: 1 1 auto; min-height: 0; display: flex; gap: 1px; background: var(--border); }
 .viewer-shell { min-width: 0; flex: 1 1 0; display: flex; flex-direction: column; background: var(--panel); }

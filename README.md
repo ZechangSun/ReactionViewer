@@ -1,8 +1,8 @@
 # Reaction Viewer
 
 <p align="center">
-  在 VS Code 中并排比较、对齐和播放分子轨迹。<br>
-  Compare, align, and play molecular trajectories side by side in VS Code.
+  在 VS Code 1.84.1 及以上版本中并排比较、对齐和播放分子轨迹。<br>
+  Compare, align, and play molecular trajectories side by side in VS Code 1.84.1 or later.
 </p>
 
 <p align="center">
@@ -23,10 +23,10 @@ Reaction Viewer 是一个 VS Code 扩展，用于通过 3Dmol.js 并排查看和
 - **Center XYZ**：逐帧移除每个结构的几何中心偏移。
 - **Kabsch align**：根据第一帧的原子顺序，将所有选中轨迹刚性对齐到第一个文件，并将变换应用到全部帧。
 - 多帧轨迹共享播放、帧滑块和播放速度控制。
-- 自动识别金属–供体配位接触，并用分离清晰的彩色虚线显示；工具栏提供 Strict、Normal 和 Wide 三档距离阈值。
+- 根据元素和距离推测金属–配体接触，并用分离清晰的彩色虚线显示；工具栏提供 Strict、Normal 和 Wide 三档距离阈值，关闭 **Metal contacts** 会真正隐藏这些接触。
 - 当文件名为 `reactant.xyz`、`transition_state.xyz` 和 `product.xyz` 时，自动启用反应模式，显示能量曲线、正逆反应能垒、反应能和反应中心。
 
-配位键基于元素类型与共价半径缩放距离进行启发式判断。默认 **Normal** 适用于常见过渡金属配合物；使用 **Strict** 可减少误判，使用 **Wide** 可显示较长的离子接触。氢接触和金属–金属接触不会被归类为配位键。
+金属–配体接触基于元素类型与共价半径缩放距离进行启发式推测，并在轨迹中使用滞回来减少阈值附近的闪烁。普通 XYZ 不包含键级、电荷或配位信息，因此虚线表示推测的接触，而不是对配位键类型的确定结论。默认 **Normal** 适用于常见过渡金属配合物；使用 **Strict** 可减少误判，使用 **Wide** 可显示较长的离子接触。氢接触和金属–金属接触不会被归入此类。
 
 ### 安装与使用
 
@@ -47,7 +47,7 @@ energy=-100.123456 hartree
 
 支持 `hartree` / `Ha` / `a.u.`、`eV`、`kcal/mol` 和 `kJ/mol`。可换算的能量统一显示为相对 `kcal/mol`。如果不提供单位，则三个值都必须无单位，能量曲线会使用通用能量单位。
 
-反应中心通过比较反应物与产物的共价连接关系推断。周围结构会淡化，中心原子保留元素颜色；断裂键显示为红色，新生成键显示为绿色。三个文件必须包含相同的原子，并保持相同顺序。
+反应中心通过原子顺序比较反应物与产物中基于距离推测的连接关系，包括非金属共价候选和金属–配体接触。显示采用三级聚焦：核心原子和键保留元素原色并略微放大，2.5 Å 内的局部环境中度淡化，其余结构高度淡化；核心原子外使用低饱和金色线框光环标记。过渡态中的部分成键使用元素原色虚线表示，不使用额外的键改色。三个文件必须包含相同的原子，并保持相同顺序。
 
 ### 支持的轨迹格式
 
@@ -81,7 +81,7 @@ npx @vscode/vsce package
 
 ## English
 
-Reaction Viewer is a VS Code extension for viewing and comparing one to three XYZ or text-based TRJ molecular trajectories side by side with 3Dmol.js. All viewer assets are bundled with the extension, so no network connection is required at runtime.
+Reaction Viewer is a VS Code 1.84.1+ extension for viewing and comparing one to three XYZ or text-based TRJ molecular trajectories side by side with 3Dmol.js. All viewer assets are bundled with the extension, so no network connection is required at runtime.
 
 ### Features
 
@@ -91,10 +91,10 @@ Reaction Viewer is a VS Code extension for viewing and comparing one to three XY
 - **Center XYZ** removes each frame's centroid independently.
 - **Kabsch align** rigidly aligns every selected trajectory to the first file using the atom order in the first frame, then applies the transform to all frames.
 - Shared playback, frame scrubbing, and speed controls for multi-frame trajectories.
-- Automatic metal–donor contact detection with clearly separated, element-colored dashed coordination bonds; Strict, Normal, and Wide distance cutoffs are available in the toolbar.
+- Inferred metal–ligand contacts shown as clearly separated, element-colored dashed lines; Strict, Normal, and Wide distance ranges are available, and disabling **Metal contacts** hides them completely.
 - Automatic reaction mode for files named `reactant.xyz`, `transition_state.xyz`, and `product.xyz`, including an energy profile, forward and reverse barriers, reaction energy, and reaction-center highlighting.
 
-Coordination bonds are identified heuristically from element types and covalent-radius-scaled distances. The default **Normal** cutoff works well for common transition-metal complexes; use **Strict** to reduce false positives or **Wide** for longer ionic contacts. Hydrogen and metal–metal contacts are not classified as coordination bonds.
+Metal–ligand contacts are inferred heuristically from element types and covalent-radius-scaled distances, with trajectory hysteresis to reduce flicker near a cutoff. Plain XYZ data has no bond order, charge, or coordination metadata, so a dashed line represents an inferred contact rather than a definitive bond classification. The default **Normal** range works well for common transition-metal complexes; use **Strict** to reduce false positives or **Wide** for longer ionic contacts. Hydrogen and metal–metal contacts are not included in this category.
 
 ### Install and use
 
@@ -115,7 +115,7 @@ energy=-100.123456 hartree
 
 Accepted units are `hartree` / `Ha` / `a.u.`, `eV`, `kcal/mol`, and `kJ/mol`. Convertible values are reported as relative `kcal/mol`. If no unit is supplied, all three values must be unitless and the profile is shown in generic energy units.
 
-The reaction center is inferred by comparing covalent connectivity in the reactant and product using atom order. The surrounding structure is faded while center atoms retain their element colors; broken bonds are red and formed bonds are green. All three files must contain the same atoms in the same order.
+The reaction center is inferred by comparing distance-based connectivity in the reactant and product using atom order, including both nonmetal covalent candidates and metal–ligand contacts. A three-level focus keeps core atoms and bonds at their normal element colors and slightly enlarged, shows the local environment within 2.5 Å at medium opacity, and strongly fades distant context. Low-saturation gold wireframe halos mark the core atoms. Partial transition-state bonds use element-colored dashed lines without bond recoloring. All three files must contain the same atoms in the same order.
 
 ### Supported trajectory input
 

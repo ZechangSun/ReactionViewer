@@ -94,16 +94,19 @@
     molecules.forEach((molecule) => {
       molecule.viewer.removeAllModels();
       molecule.viewer.removeAllShapes();
-      molecule.coordinationByFrame = molecule.frames.map((frame) => ReactionMath.findCoordinationBonds(frame.atoms, cutoff));
+      molecule.coordinationByFrame = ReactionMath.trackMetalLigandContacts(molecule.frames, cutoff);
       molecule.model = molecule.viewer.addModelsAsFrames(ReactionMath.toXYZ(molecule.frames), 'xyz');
-      if (coordinationToggle.checked) removeCoordinationFromModel(molecule);
+      removeOverlayBondsFromModel(molecule);
       const focusReactionCenter = Boolean(reaction && reactionCenterToggle.checked && reaction.center.atomIndices.length);
-      const contextOpacity = focusReactionCenter ? 0.34 : 1;
+      molecule.reactionFocus = focusReactionCenter
+        ? ReactionMath.reactionFocusLayers(molecule.frames[0].atoms, reaction.center.atomIndices)
+        : null;
+      const contextOpacity = focusReactionCenter ? 0.07 : 1;
       molecule.viewer.setStyle({}, {
         stick: { radius: 0.18, opacity: contextOpacity },
         sphere: { scale: 0.28, opacity: contextOpacity },
       });
-      applyReactionCenterStyle(molecule);
+      applyReactionFocusStyle(molecule);
       drawSceneOverlays(molecule, 0);
       if (zoom) molecule.viewer.zoomTo();
       molecule.viewer.render();
@@ -161,15 +164,24 @@
     rebuildModels(false);
     const count = molecules.reduce((sum, molecule) => sum + molecule.coordinationByFrame[0].length, 0);
     status.textContent = coordinationToggle.checked
-      ? `Coordination mode · ${count} metal–donor bond${count === 1 ? '' : 's'} detected`
-      : 'Coordination mode off · 3Dmol automatic bonds shown';
+      ? `Metal contacts · ${count} inferred contact${count === 1 ? '' : 's'} shown`
+      : 'Metal contacts hidden';
   }
 
-  function removeCoordinationFromModel(molecule) {
+  function reactionOverlayBonds(molecule) {
+    if (!reaction || !reactionCenterToggle.checked || !molecule.reactionRole) return [];
+    return ReactionMath.reactionBondOverlays(reaction.center, molecule.reactionRole);
+  }
+
+  function removeOverlayBondsFromModel(molecule) {
     const state = molecule.model.getInternalState();
     state.frames.forEach((atoms, frameIndex) => {
-      const pairs = molecule.coordinationByFrame[frameIndex] || [];
-      pairs.forEach(({ i, j }) => {
+      const presentation = ReactionMath.planBondPresentation(
+        molecule.coordinationByFrame[frameIndex] || [],
+        reactionOverlayBonds(molecule),
+        coordinationToggle.checked,
+      );
+      presentation.hiddenBaseBonds.forEach(({ i, j }) => {
         removeBond(atoms[i], j);
         removeBond(atoms[j], i);
       });
@@ -190,21 +202,33 @@
 
   function drawSceneOverlays(molecule, frameIndex) {
     molecule.viewer.removeAllShapes();
-    const pairs = coordinationToggle.checked ? molecule.coordinationByFrame[frameIndex] || [] : [];
+    const presentation = ReactionMath.planBondPresentation(
+      molecule.coordinationByFrame[frameIndex] || [],
+      reactionOverlayBonds(molecule),
+      coordinationToggle.checked,
+    );
+    const pairs = presentation.metalContactOverlays;
     if (pairs.length) {
       const atoms = molecule.frames[frameIndex].atoms;
       pairs.forEach(({ i, j }) => {
-        addRoundedCoordinationBond(molecule.viewer, atoms[i], atoms[j]);
+        const focusReactionCenter = Boolean(reaction && reactionCenterToggle.checked && reaction.center.atomIndices.length);
+        const touchesCore = focusReactionCenter && molecule.reactionFocus.core.some((index) => index === i || index === j);
+        const touchesShell = focusReactionCenter && molecule.reactionFocus.shell.some((index) => index === i || index === j);
+        const opacity = !focusReactionCenter || touchesCore ? 1 : touchesShell ? 0.34 : 0.07;
+        addElementColoredDashedBond(molecule.viewer, atoms[i], atoms[j], opacity, 0.14);
       });
     }
-    drawReactionCenter(molecule, frameIndex);
+    presentation.reactionOverlays.forEach(({ i, j }) => {
+      addElementColoredDashedBond(molecule.viewer, molecule.frames[frameIndex].atoms[i], molecule.frames[frameIndex].atoms[j], 1, 0.16);
+    });
+    drawReactionFocusHalos(molecule, frameIndex);
     const frameCount = molecule.frames.length;
     const atomCount = molecule.frames[0].atoms.length;
-    const coordText = coordinationToggle.checked ? ` · ${pairs.length} coord.` : '';
+    const coordText = coordinationToggle.checked ? ` · ${pairs.length} metal contact${pairs.length === 1 ? '' : 's'}` : '';
     molecule.meta.textContent = `${frameCount} frame${frameCount === 1 ? '' : 's'} · ${atomCount} atoms${coordText}`;
   }
 
-  function addRoundedCoordinationBond(viewer, atomA, atomB) {
+  function addElementColoredDashedBond(viewer, atomA, atomB, opacity = 1, radius = 0.14) {
     const defaultColors = $3Dmol.elementColors && $3Dmol.elementColors.defaultColors;
     const colorA = defaultColors && defaultColors[atomA.elem] !== undefined ? defaultColors[atomA.elem] : 0xcccccc;
     const colorB = defaultColors && defaultColors[atomB.elem] !== undefined ? defaultColors[atomB.elem] : 0xcccccc;
@@ -223,8 +247,9 @@
       viewer.addCylinder({
         start: { x: atomA.x + dx * startT, y: atomA.y + dy * startT, z: atomA.z + dz * startT },
         end: { x: atomA.x + dx * endT, y: atomA.y + dy * endT, z: atomA.z + dz * endT },
-        radius: 0.14,
+        radius,
         color: index < dashCount / 2 ? colorA : colorB,
+        opacity,
         fromCap: 2,
         toCap: 2,
       });
@@ -283,7 +308,7 @@
       <span class="energy-arrow">→</span>
       <div class="energy-step"><span class="role">Product</span><strong>${energyText('product')}</strong></div>
       ${metrics}
-      <div class="reaction-legend"><span><i class="legend-dot broken"></i>broken</span><span><i class="legend-dot formed"></i>formed</span><span><i class="legend-dot center"></i>focused atoms</span></div>`;
+      <div class="reaction-legend"><span><i class="legend-dot center"></i>reaction center</span><span><i class="legend-dot context"></i>faded context</span></div>`;
     reactionSummary.hidden = false;
   }
 
@@ -292,63 +317,52 @@
     return `${normalized > 0 ? '+' : ''}${normalized.toFixed(2)}`;
   }
 
-  function applyReactionCenterStyle(molecule) {
-    if (!reaction || !reactionCenterToggle.checked || !reaction.center.atomIndices.length) return;
+  function applyReactionFocusStyle(molecule) {
+    if (!molecule.reactionFocus) return;
+    if (molecule.reactionFocus.shell.length) {
+      molecule.model.setStyle(
+        { index: molecule.reactionFocus.shell },
+        {
+          stick: { radius: 0.18, opacity: 0.34 },
+          sphere: { scale: 0.29, opacity: 0.30 },
+        },
+        true,
+      );
+    }
     molecule.model.setStyle(
-      { index: reaction.center.atomIndices },
+      { index: molecule.reactionFocus.core },
       {
-        stick: { radius: 0.2, opacity: 0.96 },
-        sphere: { scale: 0.33, opacity: 0.96 },
+        stick: { radius: 0.21, opacity: 1 },
+        sphere: { scale: 0.36, opacity: 1 },
       },
       true,
     );
   }
 
-  function drawReactionCenter(molecule, frameIndex) {
-    if (!reaction || !reactionCenterToggle.checked || !molecule.reactionRole) return;
+  function drawReactionFocusHalos(molecule, frameIndex) {
+    if (!molecule.reactionFocus) return;
     const atoms = molecule.frames[frameIndex].atoms;
-    if (molecule.reactionRole === 'reactant') {
-      reaction.center.broken.forEach((bond) => addReactionBond(molecule.viewer, atoms, bond, 0xff5d67, false));
-    } else if (molecule.reactionRole === 'product') {
-      reaction.center.formed.forEach((bond) => addReactionBond(molecule.viewer, atoms, bond, 0x44d17a, false));
-    } else if (molecule.reactionRole === 'transitionState') {
-      reaction.center.broken.forEach((bond) => addReactionBond(molecule.viewer, atoms, bond, 0xff5d67, true));
-      reaction.center.formed.forEach((bond) => addReactionBond(molecule.viewer, atoms, bond, 0x44d17a, true));
-    }
-  }
-
-  function addReactionBond(viewer, atoms, bond, color, dashed) {
-    const atomA = atoms[bond.i];
-    const atomB = atoms[bond.j];
-    if (!atomA || !atomB) return;
-    if (!dashed) {
-      viewer.addCylinder({
-        start: { x: atomA.x, y: atomA.y, z: atomA.z },
-        end: { x: atomB.x, y: atomB.y, z: atomB.z },
-        radius: 0.23,
-        color,
-        opacity: 0.88,
-        fromCap: 2,
-        toCap: 2,
+    molecule.reactionFocus.core.forEach((index) => {
+      const atom = atoms[index];
+      if (!atom) return;
+      const radius = ReactionMath.reactionHaloRadius(atom.elem);
+      molecule.viewer.addSphere({
+        center: { x: atom.x, y: atom.y, z: atom.z },
+        radius,
+        color: 0xffd166,
+        opacity: 0.46,
+        wireframe: true,
+        quality: 1,
       });
-      return;
-    }
-    const dx = atomB.x - atomA.x;
-    const dy = atomB.y - atomA.y;
-    const dz = atomB.z - atomA.z;
-    const dashCount = 4;
-    for (let index = 0; index < dashCount; index++) {
-      const startT = (index + 0.30) / dashCount;
-      const endT = (index + 0.70) / dashCount;
-      viewer.addCylinder({
-        start: { x: atomA.x + dx * startT, y: atomA.y + dy * startT, z: atomA.z + dz * startT },
-        end: { x: atomA.x + dx * endT, y: atomA.y + dy * endT, z: atomA.z + dz * endT },
-        radius: 0.17,
-        color,
-        fromCap: 2,
-        toCap: 2,
+      molecule.viewer.addSphere({
+        center: { x: atom.x, y: atom.y, z: atom.z },
+        radius: radius + 0.10,
+        color: 0xffe29a,
+        opacity: 0.10,
+        wireframe: true,
+        quality: 1,
       });
-    }
+    });
   }
 
   function showError(error) {

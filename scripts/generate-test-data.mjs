@@ -31,6 +31,24 @@ const ammonia = [
   ['H', -0.813830, -0.469865, -0.271810],
 ];
 
+const cisplatinCore = [
+  ['Pt', 0.000, 0.000, 0.000],
+  ['Cl', 2.300, 0.000, 0.000],
+  ['Cl', 0.000, 2.300, 0.000],
+  ['N', -2.050, 0.000, 0.000],
+  ['N', 0.000, -2.050, 0.000],
+];
+
+const diironContact = [
+  ['Fe', -1.225, 0.000, 0.000],
+  ['Fe', 1.225, 0.000, 0.000],
+];
+
+const ironHydride = [
+  ['Fe', 0.000, 0.000, 0.000],
+  ['H', 1.550, 0.000, 0.000],
+];
+
 const reactionReactant = [
   ['C', 0.000, 0.000, 0.000], ['H', 0.000, 1.020, 0.000], ['H', 0.000, -0.510, 0.883],
   ['H', 0.000, -0.510, -0.883], ['Cl', 1.780, 0.000, 0.000], ['F', -3.200, 0.000, 0.000],
@@ -43,6 +61,57 @@ const reactionProduct = [
   ['C', 0.000, 0.000, 0.000], ['H', 0.000, 1.020, 0.000], ['H', 0.000, -0.510, 0.883],
   ['H', 0.000, -0.510, -0.883], ['Cl', 3.200, 0.000, 0.000], ['F', -1.350, 0.000, 0.000],
 ];
+
+// These compact geometries are deliberately schematic. Their purpose is to
+// make connectivity changes deterministic at the viewer's inference cutoffs,
+// not to serve as optimized quantum-chemical structures.
+const reactionCases = {
+  'proton-transfer': {
+    energies: [-75.000, -74.985, -75.005],
+    label: 'O-to-N proton transfer',
+    frames: [
+      [['O', 0, 0, 0], ['H', 0.98, 0, 0], ['N', 2.80, 0, 0], ['C', -1.43, 0, 0], ['C', 4.27, 0, 0]],
+      [['O', 0, 0, 0], ['H', 1.40, 0, 0], ['N', 2.80, 0, 0], ['C', -1.43, 0, 0], ['C', 4.27, 0, 0]],
+      [['O', 0, 0, 0], ['H', 1.82, 0, 0], ['N', 2.80, 0, 0], ['C', -1.43, 0, 0], ['C', 4.27, 0, 0]],
+    ],
+  },
+  'diels-alder': {
+    energies: [-154.000, -153.970, -154.030],
+    label: 'concerted Diels-Alder cycloaddition',
+    frames: [
+      [['C', 1.40, 0, 0], ['C', 0.70, 1.212436, 0], ['C', -0.70, 1.212436, 0], ['C', -1.40, 0, 0], ['C', 0.70, -4.00, 0], ['C', -0.70, -4.00, 0]],
+      [['C', 1.40, 0, 0], ['C', 0.70, 1.212436, 0], ['C', -0.70, 1.212436, 0], ['C', -1.40, 0, 0], ['C', 0.70, -2.606, 0], ['C', -0.70, -2.606, 0]],
+      [['C', 1.40, 0, 0], ['C', 0.70, 1.212436, 0], ['C', -0.70, 1.212436, 0], ['C', -1.40, 0, 0], ['C', 0.70, -1.212436, 0], ['C', -0.70, -1.212436, 0]],
+    ],
+  },
+  'ring-opening': {
+    energies: [-117.000, -116.975, -117.010],
+    label: 'three-membered ring opening',
+    frames: [
+      [['C', -0.75, 0, 0], ['C', 0, 1.299038, 0], ['C', 0.75, 0, 0]],
+      [['C', -1.05, 0, 0], ['C', 0, 1.00, 0], ['C', 1.05, 0, 0]],
+      [['C', -1.50, 0, 0], ['C', 0, 0, 0], ['C', 1.50, 0, 0]],
+    ],
+  },
+  'ligand-substitution': {
+    energies: [-220.000, -219.985, -220.008],
+    label: 'Zn nitrogen-to-oxygen ligand substitution',
+    frames: [
+      [['Zn', 0, 0, 0], ['N', 2.10, 0, 0], ['C', 3.50, 0, 0], ['O', -4.00, 0, 0], ['H', -4.96, 0, 0]],
+      [['Zn', 0, 0, 0], ['N', 2.65, 0, 0], ['C', 4.05, 0, 0], ['O', -2.60, 0, 0], ['H', -3.56, 0, 0]],
+      [['Zn', 0, 0, 0], ['N', 4.00, 0, 0], ['C', 5.40, 0, 0], ['O', -2.00, 0, 0], ['H', -2.96, 0, 0]],
+    ],
+  },
+  'reductive-elimination': {
+    energies: [-310.000, -309.975, -310.020],
+    label: 'Pd carbon-carbon reductive elimination',
+    frames: [
+      [['Pd', 0, 0, 0], ['C', -1.80, 0, 0], ['C', 1.80, 0, 0], ['P', 0, 2.20, 0], ['P', 0, -2.20, 0]],
+      [['Pd', 0, 0, 0], ['C', 2.50, 1.10, 0], ['C', 2.50, -1.10, 0], ['P', 0, 2.20, 0], ['P', 0, -2.20, 0]],
+      [['Pd', 0, 0, 0], ['C', 3.00, 0.75, 0], ['C', 3.00, -0.75, 0], ['P', 0, 2.20, 0], ['P', 0, -2.20, 0]],
+    ],
+  },
+};
 
 function zincTetraammine(phase = 0) {
   const invSqrt3 = 1 / Math.sqrt(3);
@@ -67,6 +136,19 @@ function zincTetraammine(phase = 0) {
       atoms.push(['H', nitrogen[0] + offset[0], nitrogen[1] + offset[1], nitrogen[2] + offset[2]]);
     }
   }
+  return atoms;
+}
+
+function ironPentacarbonyl() {
+  const directions = [
+    [0, 0, 1], [0, 0, -1],
+    [1, 0, 0], [-0.5, Math.sqrt(3) / 2, 0], [-0.5, -Math.sqrt(3) / 2, 0],
+  ];
+  const atoms = [['Fe', 0, 0, 0]];
+  directions.forEach((direction) => {
+    atoms.push(['C', ...direction.map((value) => value * 1.80)]);
+    atoms.push(['O', ...direction.map((value) => value * 2.95)]);
+  });
   return atoms;
 }
 
@@ -111,7 +193,19 @@ function trajectory(base, count, options = {}) {
 function zincTrajectory(count) {
   return `${Array.from({ length: count }, (_, i) => {
     const phase = 2 * Math.PI * i / count;
-    return frame(zincTetraammine(phase), `tetraamminezinc coordination breathing frame ${i + 1}/${count}`);
+    return frame(zincTetraammine(phase), `tetraamminezinc metal-contact breathing frame ${i + 1}/${count}`);
+  }).join('\n')}\n`;
+}
+
+function zincDissociationTrajectory() {
+  const direction = [1, 1, 1].map((value) => value / Math.sqrt(3));
+  const shifts = [0, 0.35, 0.53, 0.60, 0.75, 1.00];
+  return `${shifts.map((shift, frameIndex) => {
+    const atoms = zincTetraammine().map((atom, atomIndex) => {
+      if (atomIndex < 1 || atomIndex > 4) return atom;
+      return [atom[0], ...atom.slice(1).map((value, axis) => value + direction[axis] * shift)];
+    });
+    return frame(atoms, `tetraamminezinc ligand dissociation frame ${frameIndex + 1}/${shifts.length}`);
   }).join('\n')}\n`;
 }
 
@@ -127,8 +221,13 @@ const files = new Map([
   ['valid/09-water-vibration-drift-12frames.xyz', trajectory(water, 12, { name: 'drifting water vibration', drift: true })],
   ['valid/10-methane-vibration-8frames.trj', trajectory(methane, 8, { name: 'methane vibration', drift: true })],
   ['valid/11-water-short-4frames.trj', trajectory(water, 4, { name: 'short water trajectory' })],
-  ['valid/12-zinc-tetraammine-coordination.xyz', `${frame(zincTetraammine(), 'Tetraamminezinc model; expected 4 dashed Zn--N coordination bonds')}\n`],
+  ['valid/12-zinc-tetraammine-coordination.xyz', `${frame(zincTetraammine(), 'Tetraamminezinc model; expected 4 inferred dashed Zn--N contacts')}\n`],
   ['valid/13-zinc-tetraammine-breathing-10frames.trj', zincTrajectory(10)],
+  ['valid/14-cisplatin-ptcl2n2-core.xyz', `${frame(cisplatinCore, 'Square-planar cis-PtCl2N2 core; expected 2 Pt--Cl and 2 Pt--N contacts')}\n`],
+  ['valid/15-iron-pentacarbonyl.xyz', `${frame(ironPentacarbonyl(), 'Trigonal-bipyramidal Fe(CO)5; expected 5 Fe--C contacts and 5 covalent C--O bonds')}\n`],
+  ['valid/16-diiron-metal-contact.xyz', `${frame(diironContact, 'Fe--Fe pair; must not be classified as a metal-ligand or ordinary covalent candidate')}\n`],
+  ['valid/17-iron-hydride-policy.xyz', `${frame(ironHydride, 'Fe--H policy case; hydrogen is excluded from inferred metal-ligand contacts')}\n`],
+  ['valid/18-zinc-ligand-dissociation-6frames.trj', zincDissociationTrajectory()],
   ['invalid/01-bad-atom-count.xyz', '3\nClaims three atoms but contains two\nO 0 0 0\nH 0.95 0 0\n'],
   ['invalid/02-changed-atom-order.trj', '3\nframe 1\nO 0 0 0\nH 0.95 0 0\nH -0.24 0.93 0\n3\nframe 2 swaps atom order\nH 0.95 0 0\nO 0 0 0\nH -0.24 0.93 0\n'],
   ['invalid/03-nonnumeric-coordinate.xyz', '2\nBad coordinate\nH zero 0 0\nH 1 0 0\n'],
@@ -139,8 +238,21 @@ const files = new Map([
   ['reaction/product.xyz', `${frame(reactionProduct, 'energy=-100.010000 hartree | SN2 product')}\n`],
 ]);
 
+const reactionFileNames = ['reactant.xyz', 'transition_state.xyz', 'product.xyz'];
+for (const [caseName, reactionCase] of Object.entries(reactionCases)) {
+  reactionCase.frames.forEach((atoms, index) => {
+    const role = ['reactant', 'transition state', 'product'][index];
+    files.set(
+      `reaction/${caseName}/${reactionFileNames[index]}`,
+      `${frame(atoms, `energy=${reactionCase.energies[index].toFixed(6)} hartree | ${reactionCase.label} ${role}`)}\n`,
+    );
+  });
+}
+
 for (const [relativePath, content] of files) {
-  await writeFile(resolve(root, 'test-data', relativePath), content, 'utf8');
+  const target = resolve(root, 'test-data', relativePath);
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, content, 'utf8');
 }
 
 const readme = `# Reaction Viewer test data
@@ -157,8 +269,13 @@ This deterministic set exercises file parsing, side-by-side layout, camera linki
 6. **Different trajectory lengths:** open \`07-water-vibration-12frames.trj\`, \`10-methane-vibration-8frames.trj\`, and \`11-water-short-4frames.trj\`. The shared timeline has 12 steps; shorter trajectories loop independently.
 7. **Kabsch validation:** open water plus \`06-ammonia.xyz\` or \`invalid/05-kabsch-element-mismatch.xyz\`. Alignment should explain the element/count incompatibility.
 8. **Parser errors:** open each of the first four files in \`invalid/\`; each should show a clear validation message.
-9. **Coordination bonds:** open \`12-zinc-tetraammine-coordination.xyz\`. Normal cutoff should detect four Zn–N contacts and render them slightly thinner than N–H covalent bonds. Each dashed bond is split at its midpoint and retains the normal Zn/N element colors. Use \`13-zinc-tetraammine-breathing-10frames.trj\` to verify that dashed bonds follow trajectory frames.
-10. **Reaction mode:** select \`reaction/reactant.xyz\`, \`reaction/transition_state.xyz\`, and \`reaction/product.xyz\`. The energy strip should report a forward barrier of about 12.55 kcal/mol, reaction energy of about -6.28 kcal/mol, and reverse barrier of about 18.83 kcal/mol. C–Cl breaking is red, C–F formation is green, and surrounding atoms fade while C/Cl/F retain their element colors.
+9. **Metal contacts:** open \`12-zinc-tetraammine-coordination.xyz\`. Normal range should infer four Zn–N contacts and render them slightly thinner than N–H covalent bonds. Each dashed line is split at its midpoint and retains the normal Zn/N element colors; disabling **Metal contacts** should hide the Zn–N lines instead of turning them into solid bonds. Use \`13-zinc-tetraammine-breathing-10frames.trj\` to verify that contacts follow trajectory frames without cutoff flicker.
+10. **Reaction mode:** select \`reaction/reactant.xyz\`, \`reaction/transition_state.xyz\`, and \`reaction/product.xyz\`. The energy strip should report a forward barrier of about 12.55 kcal/mol, reaction energy of about -6.28 kcal/mol, and reverse barrier of about 18.83 kcal/mol. C/Cl/F retain normal element colors with gold wireframe halos, their nearby environment is partially faded, distant context is strongly faded, and the transition state uses element-colored dashed partial bonds.
+11. **Mixed ligands:** open \`14-cisplatin-ptcl2n2-core.xyz\`; Normal range should show two Pt–Cl and two Pt–N dashed contacts.
+12. **Metal carbonyl:** open \`15-iron-pentacarbonyl.xyz\`; five Fe–C contacts should be dashed while the five C–O bonds remain solid, with no Fe–O contacts.
+13. **Excluded pair types:** \`16-diiron-metal-contact.xyz\` must not label Fe–Fe as a metal–ligand contact, and \`17-iron-hydride-policy.xyz\` documents the current policy of excluding Fe–H from that category.
+14. **Ligand dissociation:** play \`18-zinc-ligand-dissociation-6frames.trj\`; one Zn–N contact should persist briefly beyond the entry threshold, then disappear once without flickering back.
+15. **Reaction matrix:** each subfolder under \`reaction/\` contains an independently selectable reactant / transition-state / product triplet. See \`reaction/README.md\` for the expected reaction center in each case.
 
 ## Regenerate
 
@@ -171,5 +288,22 @@ npm run generate:test-data
 The \`.trj\` files intentionally contain multi-frame XYZ text, matching the first-version TRJ contract of the extension.
 `;
 await writeFile(resolve(root, 'test-data/README.md'), readme, 'utf8');
+
+const reactionReadme = `# Reaction mechanism matrix
+
+Select all three XYZ files inside one directory, then run **Reaction Viewer: Open Molecular Comparison**. These are schematic, deterministic regression geometries rather than optimized structures.
+
+| Directory | Mechanism covered | Expected reaction-center change |
+| --- | --- | --- |
+| \`reaction/\` | SN2 substitution | break C–Cl, form C–F |
+| \`proton-transfer/\` | heteroatom proton transfer | break O–H, form N–H |
+| \`diels-alder/\` | concerted cycloaddition | form two C–C bonds |
+| \`ring-opening/\` | ring cleavage | break one C–C bond |
+| \`ligand-substitution/\` | coordination substitution | break Zn···N, form Zn···O |
+| \`reductive-elimination/\` | organometallic elimination | break two Pd···C contacts, form C–C |
+
+For every case, ordinary bond colors should stay element-based. Gold double halos mark the reaction-center atoms; the local shell remains visible but muted, distant context fades strongly, and only the transition-state panel receives dashed partial-bond overlays.
+`;
+await writeFile(resolve(reactionDir, 'README.md'), reactionReadme, 'utf8');
 
 console.log(`Generated ${files.size} molecule fixtures in ${resolve(root, 'test-data')}`);

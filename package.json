@@ -6,7 +6,7 @@
   "publisher": "ZechangSun",
   "icon": "media/icon.png",
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.84.1"
   },
   "categories": ["Visualization"],
   "activationEvents": [
@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@types/vscode": "^1.90.0",
+    "@types/vscode": "1.84.1",
     "typescript": "^5.8.0"
   }
 }
